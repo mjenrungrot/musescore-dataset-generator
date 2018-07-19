@@ -1,0 +1,3 @@
+[submodule "MuseScoreAPI"]
+	path = MuseScoreAPI
+	url = https://github.com/musescore-com/python-api-wrapper
