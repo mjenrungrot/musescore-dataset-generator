@@ -23,16 +23,16 @@ r = api.request('score', params)
 # TODO: Extend scores_list with the response from the API
 # TODO: Repeat the list of scores until reaching the last page
 
-if not os.path.exist(PDF_PATH):
+if not os.path.exists(PDF_PATH):
     os.mkdir(PDF_PATH)
 
-if not os.path.exist(MIDI_PATH):
+if not os.path.exists(MIDI_PATH):
     os.mkdir(MIDI_PATH)
 
-if not os.path.exist(PDF_PATH):
+if not os.path.exists(PDF_PATH):
     os.mkdir(MIDI_PATH)
 
-if not os.path.exist(METADATA_PATH):
+if not os.path.exists(METADATA_PATH):
     os.mkdir(METADATA_PATH)
 
 # Construct the dataset
