@@ -51,7 +51,7 @@ for score in scores_list:
     urllib.urlretrieve(path, os.path.join(XML_PATH, filename + '.mxl'))
 
     # Parse XML file
-    c = music21.parse(os.path.join(XML_PATH, filename + '.mxl'))
+    c = music21.converter.parse(os.path.join(XML_PATH, filename + '.mxl'))
 
     # Unfold all repeat signs
     c = c.expandRepeats()
@@ -60,7 +60,8 @@ for score in scores_list:
     response_MIDI = c.write('midi', os.path.join(MIDI_PATH, filename + '.mid'))
 
     # Write PDF file
-    response_PDF = c.write('pdf', os.path.join(PDF_PATH, filename + '.pdf'))
+    response_PDF = c.write('musicxml.pdf')
+    os.rename(response_PDF, os.path.join(PDF_PATH, filename + '.pdf'))
 
     # Write newly processed XML file
     response_XML = c.write('xml', os.path.join(XML_PATH, filename + '.xml'))
