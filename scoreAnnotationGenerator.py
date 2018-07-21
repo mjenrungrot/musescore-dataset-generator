@@ -59,10 +59,52 @@ import pprint
 pprint.pprint(data)
 
 # SHEET
-# TODO: Read SVG
-# TODO: Get list of centers
-# TODO: Sort by rows and bsearch
-# TODO: Group by strips
+from svgpathtools import svg2paths
+
+paths, attributes = svg2paths('Final_Project-1.svg')
+pack = zip(paths, attributes)
+filtered_pack = filter(lambda x: x[1]['class'] == 'Note', pack)
+paths, attributes = zip(*filtered_pack)
+bboxes = list(map(lambda path: path.bbox(), paths))
+centers = list(map(lambda box: ((box[0]+box[1])/2, (box[2]+box[3])/2), bboxes))
+
+def splitCentersByStrips(centers, splitter_array):
+  # Sort by rows and bsearch
+  row_sorted_centers = sorted(centers, key=lambda x: x[1]) 
+  splitter_arrays = data[0]['cumulative_notehead_strips']
+
+  # Split notehead into strips
+  strips = {}
+  current_offset = 0
+  counter = 0
+  for i in range(1,len(splitter_arrays)+1):
+    strip = []
+    for note_center in row_sorted_centers[current_offset:]:
+      strip.append(note_center)
+      counter += 1
+      if counter == splitter_arrays[i-1]: break
+
+    strips[i] = strip
+    current_offset = counter
+
+  return strips
+
+strips = splitCentersByStrips(centers, data[0]['cumulative_notehead_strips'])
+
+# Visualize strips
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import numpy as np
+
+plt.scatter(*zip(*strips[1]))
+# plt.scatter(*zip(*strips[2]), color='red')
+# plt.scatter(*zip(*strips[3]), color='green')
+# plt.scatter(*zip(*strips[4]), color='yellow')
+# plt.scatter(*zip(*strips[5]), color='black')
+plt.gca().invert_yaxis()
+plt.savefig('output.png')
+
 # TODO: Sort by columns and bsearch
 # TODO: Group by measures
 # TODO: Group by beats
