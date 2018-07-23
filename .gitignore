@@ -1,5 +1,18 @@
 # dataset
+audio_annot/
+score_annot/
+mxl/
+png/
+mid/
+mscz/
+pdf/
+xml/
+ly/
+svg/
+*.mxl
+*.png
 *.mid
+*.mscz
 *.pdf
 *.xml
 *.ly
