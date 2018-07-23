@@ -1,4 +1,5 @@
 # dataset
+*.zip
 audio_annot/
 score_annot/
 mxl/
