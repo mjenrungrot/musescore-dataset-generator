@@ -5,13 +5,19 @@ import wget
 import music21
 import requests
 import tqdm
+import shutil
+import glob
 import xml.dom.minidom
 import xml.etree.ElementTree as ET
 import time
 
+from concurrent.futures import ProcessPoolExecutor, as_completed
+
 PDF_PATH = 'pdf'
 MIDI_PATH = 'midi'
-XML_PATH = 'xml'
+MSCZ_PATH = 'mscz'
+XML_PATH = 'mxl'
+SVG_PATH = 'svg'
 METADATA_PATH = 'metadata'
 
 MUSESCORE_MAX_PAGES = 100   # MuseScore's API limit is 100
@@ -52,7 +58,7 @@ def searchScores(cred, filename='scores.xml'):
             'text': '',
             'part': 0,
             'parts': 1,
-            'page': 100,
+            'page': page_num,
             'license': 'to_play',
             'sort': 'view_count'
         }
@@ -66,10 +72,60 @@ def searchScores(cred, filename='scores.xml'):
     baseElement.writexml(writer)
     writer.close()
 
-def getScore(score_id, score_secret):
-    url = 'http://static.musescore.com/{:}/{:}/score.mxl'.format(score_id, score_secret)
-    response = wget.download(url, os.path.join(XML_PATH, '{:}_{:}.mxl'.format(score_id, score_secret)))
-    time.sleep(3)
+def getScore(score_id, score_secret, save_dir=XML_PATH, format='xml'):
+    url = 'http://static.musescore.com/{:}/{:}/score.{:}'.format(score_id, score_secret, format)
+    try:
+        response = wget.download(url, os.path.join(save_dir, '{:}_{:}.{:}'.format(score_id, score_secret, format)))
+    except:
+        response = None
+        print("Can't download {:}_{:}.{:}".format(score_id, score_secret, format))
+        pass
+    
+    return response
+
+def getXMLs(scores_XML, save_dir=XML_PATH, format='xml'):
+    tqdm_bar = tqdm.tqdm(scores_XML)
+    for score_XML in tqdm_bar:
+        score_id = score_XML.find('id').text
+        score_secret = score_XML.find('secret').text
+        tqdm_bar.set_description("Get ({:},{:})".format(score_id, score_secret))
+        if os.path.exists(os.path.join(save_dir, '{:}_{:}.{:}'.format(score_id, score_secret, format))):
+            continue
+        else:
+            response = getScore(score_id, score_secret, save_dir, format)
+
+
+def parallel_process(array, function, n_jobs=12, use_kwargs=False, front_num=3):
+    #We run the first few iterations serially to catch bugs
+    if front_num > 0:
+        front = [function(**a) if use_kwargs else function(a) for a in array[:front_num]]
+    #If we set n_jobs to 1, just run a list comprehension. This is useful for benchmarking and debugging.
+    if n_jobs==1:
+        return front + [function(**a) if use_kwargs else function(a) for a in tqdm(array[front_num:])]
+    #Assemble the workers
+    with ProcessPoolExecutor(max_workers=n_jobs) as pool:
+        #Pass the elements of array into function
+        if use_kwargs:
+            futures = [pool.submit(function, **a) for a in array[front_num:]]
+        else:
+            futures = [pool.submit(function, a) for a in array[front_num:]]
+        kwargs = {
+            'total': len(futures),
+            'unit': 'it',
+            'unit_scale': True,
+            'leave': True
+        }
+        #Print out the progress as tasks complete
+        for f in tqdm.tqdm(as_completed(futures), **kwargs):
+            pass
+    out = []
+    #Get the results from the futures. 
+    for i, future in tqdm.tqdm(enumerate(futures)):
+        try:
+            out.append(future.result())
+        except Exception as e:
+            out.append(e)
+    return front + out
 
 if __name__ == '__main__':
     cred = loadCredentials('MuseScoreAPI/credentials.json')
@@ -77,72 +133,64 @@ if __name__ == '__main__':
     if not os.path.exists('scores.xml'):
         searchScores(cred, 'scores.xml')
 
+    if not os.path.exists(XML_PATH):
+        os.mkdir(XML_PATH)
+
     tree = ET.parse('scores.xml')
     root = tree.getroot()
     scores_XML = root.getchildren()
-    tqdm_bar = tqdm.tqdm(scores_XML)
-    for score_XML in tqdm_bar:
-        score_id = score_XML.find('id').text
-        score_secret = score_XML.find('secret').text
-        tqdm_bar.set_description("Get ({:},{:})".format(score_id, score_secret))
-        getScore(score_id, score_secret)
+
+    getXMLs(scores_XML, MSCZ_PATH, 'mscz')
     
-# api = MuseScoreAPI(client_key='musichackday')
+    """
+    xml_paths = sorted(glob.glob(os.path.join(XML_PATH, '*.mxl')))
 
-# # Obtain list of solo piano score
-# scores_list = []
-# params = {
-#     'text': '',
-#     'part': 0,   # Focus only on piano scores
-#     'parts': 1,  # Focus only on solo scores
-#     'page': 0,
-#     'license': 'to_play',
-# }
-# r = api.request('score', params)
-# # TODO: Extend scores_list with the response from the API
-# # TODO: Repeat the list of scores until reaching the last page
+    if not os.path.exists(PDF_PATH):
+        os.mkdir(PDF_PATH)
 
-# if not os.path.exists(PDF_PATH):
-#     os.mkdir(PDF_PATH)
+    if not os.path.exists(MIDI_PATH):
+        os.mkdir(MIDI_PATH)
 
-# if not os.path.exists(MIDI_PATH):
-#     os.mkdir(MIDI_PATH)
+    if not os.path.exists(SVG_PATH):
+        os.mkdir(SVG_PATH)
 
-# if not os.path.exists(XML_PATH):
-#     os.mkdir(XML_PATH)
+    def f(xml_path):
+        try:
+            filename = os.path.splitext(os.path.basename(xml_path))[0]
+            c = music21.converter.parse(xml_path)
+            c = c.expandRepeats()
 
-# if not os.path.exists(METADATA_PATH):
-#     os.mkdir(METADATA_PATH)
+            # Write MIDI file
+            response_MIDI = c.write('midi', os.path.join(MIDI_PATH, filename + '.mid'))
 
-# # Construct the dataset
-# for score in scores_list:
-#     score_id = score['id']
-#     secret = score['secret']
-#     filename = score_id
+            # Write PDF file
+            response_PDF = c.write('musicxml.pdf')
+            shutil.move(response_PDF, os.path.join(PDF_PATH, filename + '.pdf'))
 
-#     # TODO: Check metadata (.json)
-#     with open(filename + '.json', 'w') as outfile:
-#         json.dump(score, outfile)
+            # Write SVG file
+            response_LY = c.write('lilypond', fp=os.path.join(SVG_PATH, filename + '.svg'))
+            response_SVG = c.write('lilypond.svg', fp=os.path.join(SVG_PATH, filename))
+            os.remove(os.path.join(SVG_PATH, filename))
+            os.remove(os.path.join(SVG_PATH, filename + '.svg'))
 
-#     # TODO: Check MusicXML (*.mxl)
-#     path = 'http://static.musescore.com/{:}/{:}/score.{:}'.format(score_id, secret, 'mxl')
-#     urllib.urlretrieve(path, os.path.join(XML_PATH, filename + '.mxl'))
+            return 1
+        except:
+            if os.path.exists(os.path.join(MIDI_PATH, filename + '.mid')):
+                os.remove(os.path.join(MIDI_PATH, filename + '.mid'))
 
-#     # Parse XML file
-#     c = music21.converter.parse(os.path.join(XML_PATH, filename + '.mxl'))
+            if os.path.exists(os.path.join(PDF_PATH, filename + '.pdf')):
+                os.remove(os.path.join(PDF_PATH, filename + '.pdf'))
 
-#     # Unfold all repeat signs
-#     c = c.expandRepeats()
+            return 0
 
-#     # Write MIDI file
-#     response_MIDI = c.write('midi', os.path.join(MIDI_PATH, filename + '.mid'))
+    output = parallel_process(xml_paths, f)
 
-#     # Write PDF file
-#     response_PDF = c.write('musicxml.pdf')
-#     os.rename(response_PDF, os.path.join(PDF_PATH, filename + '.pdf'))
+    counter = 0
+    for i in output:
+        if i == 0:
+            counter += 1
 
-#     # Write newly processed XML file
-#     response_XML = c.write('xml', os.path.join(XML_PATH, filename + '.xml'))
-
-#     # TODO: Try on the first score 
-#     break
+    print(counter)
+    """
+        
+     
