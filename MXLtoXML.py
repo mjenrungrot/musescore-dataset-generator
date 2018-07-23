@@ -20,7 +20,6 @@ def f(mxl_path):
   
   return 0
 
-mscz_paths = glob.glob('mscz/*.mscz')
-parallel_process(mscz_paths, f)
+mxl_paths = glob.glob('mxl/*.mxl')
+parallel_process(mxl_paths, f)
 
-# 196941
