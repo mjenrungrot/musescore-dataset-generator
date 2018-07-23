@@ -251,14 +251,16 @@ def f(xml_path):
   df_score, df_audio = process(filename, xml_path, svg_paths, midi_path)
 
   # Write to csv 
-  df_score.to_csv(os.path.join('score_annot', '{:}_beats.csv'.format(filename)), index=False)
-  df_audio.to_csv(os.path.join('audio_annot', '{:}.csv'.format(filename)), index=False)
+  df_score.to_csv(os.path.join('annot_sheet', '{:}_beats.csv'.format(filename)), index=False)
+  if not os.path.exists('annot_audio/{:}'.format(filename)):
+    os.mkdir('annot_audio/{:}'.format(filename))
+  df_audio.to_csv(os.path.join('annot_audio', filename, '{:}.csv'.format(filename)), index=False)
 
-if not os.path.exists('score_annot'):
-  os.mkdir('score_annot')
+if not os.path.exists('annot_sheet'):
+  os.mkdir('annot_sheet')
 
-if not os.path.exists('audio_annot'):
-  os.mkdir('audio_annot')
+if not os.path.exists('annot_audio'):
+  os.mkdir('annot_audio')
 
 xml_paths = glob.glob('xml/*.xml')
 parallel_process(xml_paths, f, front_num=0)
