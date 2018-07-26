@@ -4,7 +4,6 @@ import pandas as pd
 import glob
 import os
 import pretty_midi
-import pdb
 from parallel_utils import parallel_process
 
 def get_annotation_data(xml_file):
@@ -18,6 +17,7 @@ def get_annotation_data(xml_file):
     cumulative_notehead_strips = []
     notehead_measures = {}
     notehead_beats = {}
+    time_signature = {}
     nNotes_strip = 0
     for strip in strips:
       staves = strip.staves
@@ -25,7 +25,7 @@ def get_annotation_data(xml_file):
         measures = staff.getElementsByClass('Measure')
         for measure in measures:
           measure_num = measure.number
-
+          time_signature[measure_num] = measure.getContextByClass('TimeSignature')
           if measure_num not in notehead_measures: notehead_measures[measure_num] = 0
           if measure_num not in notehead_beats: notehead_beats[measure_num] = {}
           if len(measure.voices) == 0:
@@ -52,11 +52,13 @@ def get_annotation_data(xml_file):
       'cumulative_notehead_strips': cumulative_notehead_strips,
       'notehead_measures': notehead_measures,
       'notehead_beats': notehead_beats,
+      'time_signature': time_signature,
     })
 
   cumulative_notehead_strips = []
   notehead_measures = {}
   notehead_beats = {}
+  time_signature = {}
   for x in data:
     cumulative_notehead_strips.extend(x['cumulative_notehead_strips'])
     keys = x['notehead_measures'].keys()
@@ -65,11 +67,15 @@ def get_annotation_data(xml_file):
     keys = x['notehead_beats'].keys()
     for key in keys:
       notehead_beats[key] = x['notehead_beats'][key]
+    keys = x['time_signature'].keys()
+    for key in keys:
+      time_signature[key] = x['time_signature'][key]
 
   return {
     'cumulative_notehead_strips': cumulative_notehead_strips,
     'notehead_measures': notehead_measures,
     'notehead_beats': notehead_beats,
+    'time_signature': time_signature,
   }
 
 def get_centers(svg_file):
@@ -168,12 +174,9 @@ def filterIntegerBeats(beat_locations_dict):
 
 def process(score_name, xml_file, svg_filepaths, midi_filepath):
   xml_annotations = get_annotation_data(xml_file)
-  # print(xml_file)
-  # print(len(xml_annotations), len(svg_filepaths))
-  # assert len(xml_annotations) == len(svg_filepaths), "Number of pages mismatches"
 
   df_score = pd.DataFrame(columns=['score', 'measure', 'beat', 'strip', 'page', 'hpixel'])
-  df_audio = pd.DataFrame(columns=['measure', 'time'])
+  df_audio = pd.DataFrame(columns=['time', 'measure'])
 
   offset_strips = 0
   offset_measure = 0
@@ -203,11 +206,13 @@ def process(score_name, xml_file, svg_filepaths, midi_filepath):
       beat_locations[measure_key] = {}
       for beat_key in beat_notes[measure_key].keys():
         beat_locations[measure_key][beat_key] = summarizeBeatInfo(beat_notes[measure_key][beat_key])
+      beats = xml_annotations['time_signature'][measure_key].numerator # Find how many beats
+      for beat in range(1,beats+1):
+        if beat not in beat_locations[measure_key]:
+          beat_locations[measure_key][beat] = None
 
     # Filter for only integer-number beats
     beat_locations = filterIntegerBeats(beat_locations)
-    
-    # print(measures.keys())
 
     # Update dataframe
     for measure_key in measures.keys():
@@ -264,4 +269,3 @@ if not os.path.exists('annot_audio'):
 
 xml_paths = glob.glob('xml/*.xml')
 parallel_process(xml_paths, f, front_num=0)
-# f(xml_paths[5])
