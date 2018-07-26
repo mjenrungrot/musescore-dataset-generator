@@ -1,12 +1,19 @@
+# pylint: disable=invalid-name
+"""
+filterStaffXML contains a Python script for filter XML files
+so that the resulting XML is guaranteed that each strip contains
+only 2 stafflines, e.g. like solo piano sheet music.
+"""
 import glob
 import os
-import tqdm
 import music21
-import lxml.etree as le
 from parallel_utils import parallel_process
 
-
 def f(xml_path):
+    """
+    A function for processing a single XML file specified by
+    the xml_path
+    """
     delete = False
     try:
         c = music21.converter.parse(xml_path)
