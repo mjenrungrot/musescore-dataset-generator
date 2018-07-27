@@ -32,6 +32,5 @@ def f(mxl_path):
 
     return 0
 
-
 mxl_paths = glob.glob('mxl/*.mxl')
 parallel_process(mxl_paths, f)
