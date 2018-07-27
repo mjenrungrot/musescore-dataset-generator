@@ -1,12 +1,14 @@
-import zlib
+# pylint: disable=invalid-name
+"""
+zipData is a Python script that combines generated data into a single zip file.
+"""
 import zipfile
 import glob
-import sys
 import os
 
 OUTPUT_FILENAME = 'generated_dataset.zip'
-file_paths = set(map(lambda x: os.path.splitext(os.path.basename(x))[
-                 0], glob.glob('annot_audio/**', recursive=True)))
+file_paths = set(map(lambda x: os.path.splitext(os.path.basename(x))[0],
+                     glob.glob('annot_audio/**', recursive=True)))
 FOLDER_TO_ZIP = ['annot_audio/**', 'annot_sheet/**', 'pdf/**', 'midi/**']
 
 # Populate zip_paths
