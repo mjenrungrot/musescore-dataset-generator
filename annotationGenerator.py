@@ -368,5 +368,5 @@ if not os.path.exists('annot_audio'):
 xml_paths = glob.glob('xml/*.xml')
 try:
     parallel_process(xml_paths, f, front_num=0)
-except:
+except: # pylint: disable=bare-except
     pass
