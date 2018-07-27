@@ -1,5 +1,6 @@
-import tqdm
+# pylint: disable=line-too-long, bad-whitespace, missing-docstring, invalid-name, broad-except
 from concurrent.futures import ProcessPoolExecutor, as_completed
+import tqdm
 
 def parallel_process(array, function, n_jobs=12, use_kwargs=False, front_num=3):
     #We run the first few iterations serially to catch bugs
@@ -22,11 +23,11 @@ def parallel_process(array, function, n_jobs=12, use_kwargs=False, front_num=3):
             'leave': True
         }
         #Print out the progress as tasks complete
-        for f in tqdm.tqdm(as_completed(futures), **kwargs):
+        for _ in tqdm.tqdm(as_completed(futures), **kwargs):
             pass
     out = []
-    #Get the results from the futures. 
-    for i, future in tqdm.tqdm(enumerate(futures)):
+    #Get the results from the futures.
+    for _, future in tqdm.tqdm(enumerate(futures)):
         try:
             out.append(future.result())
         except Exception as e:
