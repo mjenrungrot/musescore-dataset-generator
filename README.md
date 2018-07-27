@@ -6,17 +6,30 @@ This repository contains scripts for generating the beat horizontal location ann
 
 Several files are used separately to generate the full annotated dataset.
 ```
-dataset_generator.py        - Search for solo piano MuseScore's sheet music, download, and write 
+datasetDownloader.py        - Search for solo piano MuseScore's sheet music, download, and write 
                                 the metadata to scores.xml
 MSCZtoXML.py                - Convert MSCZ files ('/mscz' folder) to XML files ('/xml' folder)
 MXLtoXML.py                 - Convert MXL files ('/mxl' folder) to XML files ('/xml' folder)
 processRepeatXML.py         - Eliminate repeat tags in the XML files ('/xml' folder)
+filterStaffXML.py.          - Eliminate XML files that don't contain two stafflines per strip
 XMLtoMIDI_SVG.py            - Convert XML files ('/xml' folder) to SVG files ('/svg' folder) and 
                                 MIDI files ('/midi' folder)
-scoreAnnotationGenerator.py - Generate annotations ('/annot_sheet' and '/annot_audio' folders)
+annotationGenerator.py      - Generate annotations ('/annot_sheet' and '/annot_audio' folders)
 zipData.py                  - Zip PDF, MIDI, and annotations into a single zip file
 parallel_utils.py           - Handle parallel programming utility function
 ```
+
+It is recommended that, after obtaining API key from MuseScore, the scripts are executed in this order:
+
+1. `datasetDownloader.py`
+2. `MSCZtoXML.py`
+3. `processRepeatXML.py`
+4. `filterStaffXML.py`
+5. `XMLtoMIDI_SVG.py`
+6. `annotationGenerator.py`
+7. `zipData.py`
+
+By the end of the execution, a zip file containing the entire processed dataset will be created.
 
 # License
 
